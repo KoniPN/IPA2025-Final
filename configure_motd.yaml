@@ -1,0 +1,14 @@
+---
+- name: Configure MOTD on Cisco Router
+  hosts: routers
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_command_timeout: 120
+
+  tasks:
+    - name: Configure MOTD banner
+      cisco.ios.ios_banner:
+        banner: motd
+        text: "{{ motd_text }}"
+        state: present
