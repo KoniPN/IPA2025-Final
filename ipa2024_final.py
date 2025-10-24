@@ -191,12 +191,12 @@ while True:
                 elif command == "showrun":
                     responseMessage = ansible_final.showrun(router_ip)
                 elif command == "motd":
-                    # Check if setting or getting MOTD
+                    # Check if setting or getting MOTD based on whether text is provided
                     if motd_text:
-                        # Set MOTD using Ansible
+                        # Has text = Set MOTD using Ansible
                         responseMessage = motd_final.set_motd(router_ip, motd_text)
                     else:
-                        # Get MOTD using Netmiko
+                        # No text = Get MOTD using Netmiko
                         responseMessage = motd_final.get_motd(router_ip)
             else:
                 responseMessage = "Error: No command or unknown command"
