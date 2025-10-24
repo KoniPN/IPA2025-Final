@@ -17,6 +17,19 @@ basicauth = ("admin", "cisco")
 def create(router_ip):
     api_url = f"https://{router_ip}/restconf/data/ietf-interfaces:interfaces/interface=Loopback{STUDENT_ID}"
     
+    # Check if interface already exists
+    check_resp = requests.get(
+        api_url,
+        auth=basicauth,
+        headers=headers,
+        verify=False
+    )
+    
+    if check_resp.status_code == 200:
+        # Interface already exists
+        print("Interface already exists")
+        return f"Cannot create: Interface loopback {STUDENT_ID}"
+    
     # Calculate IP address from student ID
     last_three = STUDENT_ID[-3:]  # Get last 3 digits
     x = int(last_three[0])
@@ -49,7 +62,7 @@ def create(router_ip):
 
     if(resp.status_code >= 200 and resp.status_code <= 299):
         print("STATUS OK: {}".format(resp.status_code))
-        return f"Interface loopback {STUDENT_ID} is created successfully"
+        return f"Interface loopback {STUDENT_ID} is created successfully using Restconf"
     elif(resp.status_code == 409):
         print("Interface already exists: {}".format(resp.status_code))
         return f"Cannot create: Interface loopback {STUDENT_ID}"
@@ -70,7 +83,7 @@ def delete(router_ip):
 
     if(resp.status_code >= 200 and resp.status_code <= 299):
         print("STATUS OK: {}".format(resp.status_code))
-        return f"Interface loopback {STUDENT_ID} is deleted successfully"
+        return f"Interface loopback {STUDENT_ID} is deleted successfully using Restconf"
     elif(resp.status_code == 404):
         print("Interface not found: {}".format(resp.status_code))
         return f"Cannot delete: Interface loopback {STUDENT_ID}"
@@ -100,7 +113,7 @@ def enable(router_ip):
 
     if(resp.status_code >= 200 and resp.status_code <= 299):
         print("STATUS OK: {}".format(resp.status_code))
-        return f"Interface loopback {STUDENT_ID} is enabled successfully"
+        return f"Interface loopback {STUDENT_ID} is enabled successfully using Restconf"
     elif(resp.status_code == 404):
         print("Interface not found: {}".format(resp.status_code))
         return f"Cannot enable: Interface loopback {STUDENT_ID}"
@@ -130,13 +143,13 @@ def disable(router_ip):
 
     if(resp.status_code >= 200 and resp.status_code <= 299):
         print("STATUS OK: {}".format(resp.status_code))
-        return f"Interface loopback {STUDENT_ID} is shutdowned successfully"
+        return f"Interface loopback {STUDENT_ID} is shutdowned successfully using Restconf"
     elif(resp.status_code == 404):
         print("Interface not found: {}".format(resp.status_code))
-        return f"Cannot shutdown: Interface loopback {STUDENT_ID}"
+        return f"Cannot shutdown: Interface loopback {STUDENT_ID} (checked by Restconf)"
     else:
         print('Error. Status Code: {}'.format(resp.status_code))
-        return f"Cannot shutdown: Interface loopback {STUDENT_ID}"
+        return f"Cannot shutdown: Interface loopback {STUDENT_ID} (checked by Restconf)"
 
 
 def status(router_ip):
@@ -155,12 +168,12 @@ def status(router_ip):
         admin_status = response_json['ietf-interfaces:interface']['admin-status']
         oper_status = response_json['ietf-interfaces:interface']['oper-status']
         if admin_status == 'up' and oper_status == 'up':
-            return f"Interface loopback {STUDENT_ID} is enabled"
+            return f"Interface loopback {STUDENT_ID} is enabled (checked by Restconf)"
         elif admin_status == 'down' and oper_status == 'down':
-            return f"Interface loopback {STUDENT_ID} is disabled"
+            return f"Interface loopback {STUDENT_ID} is disabled (checked by Restconf)"
     elif(resp.status_code == 404):
         print("STATUS NOT FOUND: {}".format(resp.status_code))
-        return f"No Interface loopback {STUDENT_ID}"
+        return f"No Interface loopback {STUDENT_ID} (checked by Restconf)"
     else:
         print('Error. Status Code: {}'.format(resp.status_code))
-        return f"No Interface loopback {STUDENT_ID}"
+        return f"No Interface loopback {STUDENT_ID} (checked by Restconf)"

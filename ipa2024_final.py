@@ -13,6 +13,7 @@ import os
 from dotenv import load_dotenv
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 import restconf_final
+import netconf_final
 import netmiko_final
 import ansible_final
 import glob
@@ -36,6 +37,9 @@ roomIdToGetMessages = (
 
 # Change this to your student ID
 STUDENT_ID = "66070136"
+
+# Variable to store the selected method (restconf or netconf)
+selected_method = None
 
 while True:
     # always add 1 second of delay to the loop to not go over a rate limit of API calls
@@ -79,51 +83,103 @@ while True:
     message = messages[0]["text"]
     print("Received message: " + message)
 
-    # check if the text of the message starts with the magic character "/" followed by your studentID and a space and followed by a command name
-    #  e.g.  "/66070123 10.0.15.61 create" or "/66070123 create"
+    # check if the text of the message starts with the magic character "/" followed by your studentID and a space
     if message.startswith(f"/{STUDENT_ID} "):
 
         # Split the message to extract components
         message_parts = message.split(" ")
         
-        # Define allowed router IPs
-        ALLOWED_IPS = ["10.0.15.61", "10.0.15.62", "10.0.15.63", "10.0.15.64", "10.0.15.65"]
+        # Debug: Print message parts
+        print(f"DEBUG: message_parts = {message_parts}")
+        print(f"DEBUG: len(message_parts) = {len(message_parts)}")
         
-        # Check if IP is provided (message format: /studentID IP command)
-        if len(message_parts) >= 3 and message_parts[1] in ALLOWED_IPS:
-            router_ip = message_parts[1]
-            command = message_parts[2]
-        # Check if command is provided without IP (message format: /studentID command)
-        elif len(message_parts) >= 2 and message_parts[1] not in ALLOWED_IPS:
-            # No IP specified, return error
-            command = None
-            router_ip = None
-        else:
-            command = None
-            router_ip = None
+        # Define allowed router IPs and methods
+        ALLOWED_IPS = ["10.0.15.61", "10.0.15.62", "10.0.15.63", "10.0.15.64", "10.0.15.65"]
+        ALLOWED_METHODS = ["restconf", "netconf"]
+        PART1_COMMANDS = ["create", "delete", "enable", "disable", "status"]
+        PART2_COMMANDS = ["gigabit_status", "showrun"]
+        
+        router_ip = None
+        command = None
+        responseMessage = None
+        
+        # Parse message based on different formats
+        if len(message_parts) == 2:
+            # Format: /studentID <method> OR /studentID <command>
+            second_part = message_parts[1]
             
-        print(f"Router IP: {router_ip}, Command: {command}")
+            if second_part in ALLOWED_METHODS:
+                # Method selection: /66070136 restconf or /66070136 netconf
+                selected_method = second_part
+                responseMessage = f"Ok: {second_part.capitalize()}"
+            else:
+                # Command without method or IP: /66070136 create
+                if selected_method is None:
+                    responseMessage = "Error: No method specified"
+                else:
+                    responseMessage = "Error: No IP specified"
+                    
+        elif len(message_parts) == 3:
+            # Format: /studentID <IP> <command>
+            second_part = message_parts[1]
+            third_part = message_parts[2]
+            
+            if second_part in ALLOWED_IPS:
+                router_ip = second_part
+                command = third_part
+            else:
+                # Invalid format
+                responseMessage = "Error: No command found."
+                
+        else:
+            # Invalid format
+            responseMessage = "Error: No command found."
+            
+        print(f"Method: {selected_method}, Router IP: {router_ip}, Command: {command}")
 
 # 5. Complete the logic for each command
 
-        if router_ip is None or command is None:
-            responseMessage = "Error: No IP specified"
-        elif command == "create":
-            responseMessage = restconf_final.create(router_ip)
-        elif command == "delete":
-            responseMessage = restconf_final.delete(router_ip)
-        elif command == "enable":
-            responseMessage = restconf_final.enable(router_ip)
-        elif command == "disable":
-            responseMessage = restconf_final.disable(router_ip)
-        elif command == "status":
-            responseMessage = restconf_final.status(router_ip)
-        elif command == "gigabit_status":
-            responseMessage = netmiko_final.gigabit_status(router_ip)
-        elif command == "showrun":
-            responseMessage = ansible_final.showrun(router_ip)
-        else:
-            responseMessage = "Error: No command or unknown command"
+        # Only execute command if responseMessage is not already set
+        if responseMessage is None:
+            if router_ip is None or command is None:
+                if selected_method is None:
+                    responseMessage = "Error: No method specified"
+                else:
+                    responseMessage = "Error: No IP specified"
+            elif command in PART1_COMMANDS:
+                # Part 1 commands - need method selection
+                if selected_method is None:
+                    responseMessage = "Error: No method specified"
+                elif selected_method == "restconf":
+                    if command == "create":
+                        responseMessage = restconf_final.create(router_ip)
+                    elif command == "delete":
+                        responseMessage = restconf_final.delete(router_ip)
+                    elif command == "enable":
+                        responseMessage = restconf_final.enable(router_ip)
+                    elif command == "disable":
+                        responseMessage = restconf_final.disable(router_ip)
+                    elif command == "status":
+                        responseMessage = restconf_final.status(router_ip)
+                elif selected_method == "netconf":
+                    if command == "create":
+                        responseMessage = netconf_final.create(router_ip)
+                    elif command == "delete":
+                        responseMessage = netconf_final.delete(router_ip)
+                    elif command == "enable":
+                        responseMessage = netconf_final.enable(router_ip)
+                    elif command == "disable":
+                        responseMessage = netconf_final.disable(router_ip)
+                    elif command == "status":
+                        responseMessage = netconf_final.status(router_ip)
+            elif command in PART2_COMMANDS:
+                # Part 2 commands - don't need method selection
+                if command == "gigabit_status":
+                    responseMessage = netmiko_final.gigabit_status(router_ip)
+                elif command == "showrun":
+                    responseMessage = ansible_final.showrun(router_ip)
+            else:
+                responseMessage = "Error: No command or unknown command"
         
 # 6. Complete the code to post the message to the Webex Teams room.
 
