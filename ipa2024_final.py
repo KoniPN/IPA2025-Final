@@ -16,6 +16,7 @@ import restconf_final
 import netconf_final
 import netmiko_final
 import ansible_final
+import motd_final
 import glob
 
 #######################################################################################
@@ -89,18 +90,15 @@ while True:
         # Split the message to extract components
         message_parts = message.split(" ")
         
-        # Debug: Print message parts
-        print(f"DEBUG: message_parts = {message_parts}")
-        print(f"DEBUG: len(message_parts) = {len(message_parts)}")
-        
         # Define allowed router IPs and methods
         ALLOWED_IPS = ["10.0.15.61", "10.0.15.62", "10.0.15.63", "10.0.15.64", "10.0.15.65"]
         ALLOWED_METHODS = ["restconf", "netconf"]
         PART1_COMMANDS = ["create", "delete", "enable", "disable", "status"]
-        PART2_COMMANDS = ["gigabit_status", "showrun"]
+        PART2_COMMANDS = ["gigabit_status", "showrun", "motd"]
         
         router_ip = None
         command = None
+        motd_text = None
         responseMessage = None
         
         # Parse message based on different formats
@@ -131,11 +129,25 @@ while True:
                 # Invalid format
                 responseMessage = "Error: No command found."
                 
+        elif len(message_parts) >= 4:
+            # Format: /studentID <IP> <command> <additional text>
+            # This is for motd command with text
+            second_part = message_parts[1]
+            third_part = message_parts[2]
+            
+            if second_part in ALLOWED_IPS:
+                router_ip = second_part
+                command = third_part
+                # Get remaining text (for MOTD)
+                motd_text = ' '.join(message_parts[3:])
+            else:
+                # Invalid format
+                responseMessage = "Error: No command found."
         else:
             # Invalid format
             responseMessage = "Error: No command found."
             
-        print(f"Method: {selected_method}, Router IP: {router_ip}, Command: {command}")
+        print(f"Method: {selected_method}, Router IP: {router_ip}, Command: {command}, MOTD Text: {motd_text}")
 
 # 5. Complete the logic for each command
 
@@ -178,6 +190,14 @@ while True:
                     responseMessage = netmiko_final.gigabit_status(router_ip)
                 elif command == "showrun":
                     responseMessage = ansible_final.showrun(router_ip)
+                elif command == "motd":
+                    # Check if setting or getting MOTD
+                    if motd_text:
+                        # Set MOTD using Ansible
+                        responseMessage = motd_final.set_motd(router_ip, motd_text)
+                    else:
+                        # Get MOTD using Netmiko
+                        responseMessage = motd_final.get_motd(router_ip)
             else:
                 responseMessage = "Error: No command or unknown command"
         
