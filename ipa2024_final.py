@@ -16,7 +16,6 @@ import restconf_final
 import netconf_final
 import netmiko_final
 import ansible_final
-import motd_final
 import glob
 
 #######################################################################################
@@ -201,10 +200,10 @@ while True:
                     # Check if setting or getting MOTD based on whether text is provided
                     if motd_text:
                         # Has text = Set MOTD using Ansible
-                        responseMessage = motd_final.set_motd(router_ip, motd_text)
+                        responseMessage = netmiko_final.set_motd(router_ip, motd_text)
                     else:
                         # No text = Get MOTD using Netmiko
-                        responseMessage = motd_final.get_motd(router_ip)
+                        responseMessage = netmiko_final.get_motd(router_ip)
             else:
                 responseMessage = "Error: No command or unknown command"
         
