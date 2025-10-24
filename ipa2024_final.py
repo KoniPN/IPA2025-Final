@@ -103,13 +103,17 @@ while True:
         
         # Parse message based on different formats
         if len(message_parts) == 2:
-            # Format: /studentID <method> OR /studentID <command>
+            # Format: /studentID <method> OR /studentID <IP> OR /studentID <command>
             second_part = message_parts[1]
             
             if second_part in ALLOWED_METHODS:
                 # Method selection: /66070136 restconf or /66070136 netconf
                 selected_method = second_part
                 responseMessage = f"Ok: {second_part.capitalize()}"
+            elif second_part in ALLOWED_IPS:
+                # IP without command: /66070136 10.0.15.65
+                router_ip = second_part
+                responseMessage = "Error: No command found."
             else:
                 # Command without method or IP: /66070136 create
                 if selected_method is None:
@@ -127,7 +131,7 @@ while True:
                 command = third_part
             else:
                 # Invalid format
-                responseMessage = "Error: No command found."
+                responseMessage = "Error: No command found"
                 
         elif len(message_parts) >= 4:
             # Format: /studentID <IP> <command> <additional text>
@@ -154,7 +158,10 @@ while True:
         # Only execute command if responseMessage is not already set
         if responseMessage is None:
             if router_ip is None or command is None:
-                if selected_method is None:
+                # If method is selected but missing command
+                if router_ip is not None and command is None:
+                    responseMessage = "Error: No command found."
+                elif selected_method is None:
                     responseMessage = "Error: No method specified"
                 else:
                     responseMessage = "Error: No IP specified"
